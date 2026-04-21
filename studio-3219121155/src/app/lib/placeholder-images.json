@@ -1,0 +1,41 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "artist1",
+      "description": "Abstract painter portrait",
+      "imageUrl": "https://picsum.photos/seed/artist1/400/400",
+      "imageHint": "artist portrait"
+    },
+    {
+      "id": "artwork1",
+      "description": "Modern abstract painting",
+      "imageUrl": "https://picsum.photos/seed/art1/800/1000",
+      "imageHint": "abstract painting"
+    },
+    {
+      "id": "artwork2",
+      "description": "Digital landscape art",
+      "imageUrl": "https://picsum.photos/seed/art2/800/1000",
+      "imageHint": "digital landscape"
+    },
+    {
+      "id": "artwork3",
+      "description": "Minimalist sculpture",
+      "imageUrl": "https://picsum.photos/seed/art3/800/1000",
+      "imageHint": "minimalist art"
+    },
+    {
+      "id": "artwork4",
+      "description": "Vibrant street art",
+      "imageUrl": "https://picsum.photos/seed/art4/800/1000",
+      "imageHint": "street art"
+    },
+    {
+      "id": "artwork5",
+      "description": "Surreal digital concept",
+      "imageUrl": "https://picsum.photos/seed/art5/800/1000",
+      "imageHint": "surreal art"
+    }
+  ]
+}
