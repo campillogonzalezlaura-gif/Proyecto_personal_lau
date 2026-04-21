@@ -1,0 +1,264 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents an artist's public profile within the Novart network, showcasing their identity and community engagement metrics.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity."
+        },
+        "artistName": {
+          "type": "string",
+          "description": "The artist's chosen display name or pseudonym."
+        },
+        "profilePhotoUrl": {
+          "type": "string",
+          "description": "URL to the artist's profile picture.",
+          "format": "uri"
+        },
+        "biography": {
+          "type": "string",
+          "description": "A short biographical text provided by the artist."
+        },
+        "followersCount": {
+          "type": "number",
+          "description": "The total number of other users who follow this artist."
+        },
+        "followingCount": {
+          "type": "number",
+          "description": "The total number of other artists this user is following."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the user profile was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "artistName",
+        "profilePhotoUrl",
+        "biography",
+        "followersCount",
+        "followingCount",
+        "createdAt"
+      ]
+    },
+    "Artwork": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Artwork",
+      "type": "object",
+      "description": "Represents a piece of digital artwork uploaded by an artist, including its details, public and private URLs, and interaction data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Artwork entity."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who created and owns this artwork. (Relationship: UserProfile 1:N Artwork)"
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the artwork."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description provided by the artist about the artwork."
+        },
+        "tags": {
+          "type": "array",
+          "description": "An array of keywords or tags associated with the artwork, used for categorization and discovery.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "likedByUsersIds": {
+          "type": "array",
+          "description": "An array of UserProfile IDs who have liked this artwork. (Relationship: UserProfile N:N Artwork)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "publicWatermarkedUrl": {
+          "type": "string",
+          "description": "URL to the publicly accessible, watermarked version of the artwork image, optimized for display.",
+          "format": "uri"
+        },
+        "privateOriginalUrl": {
+          "type": "string",
+          "description": "URL to the private, original high-resolution version of the artwork image, accessible only by the author.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the artwork was first uploaded.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time the artwork's details were updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "authorId",
+        "title",
+        "publicWatermarkedUrl",
+        "privateOriginalUrl",
+        "createdAt",
+        "likedByUsersIds"
+      ]
+    },
+    "Comment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Comment",
+      "type": "object",
+      "description": "Represents a comment made by a user on a specific artwork.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Comment entity."
+        },
+        "artworkId": {
+          "type": "string",
+          "description": "Reference to the Artwork this comment is associated with. (Relationship: Artwork 1:N Comment)"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who posted this comment. (Relationship: UserProfile 1:N Comment)"
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the comment."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the comment was posted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "artworkId",
+        "authorId",
+        "content",
+        "createdAt"
+      ]
+    },
+    "Follow": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Follow",
+      "type": "object",
+      "description": "Represents a follow relationship between two user profiles, where one user is following another.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Follow relationship entity."
+        },
+        "followerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who initiated the follow. (Relationship: UserProfile N:N UserProfile)"
+        },
+        "followingId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who is being followed. (Relationship: UserProfile N:N UserProfile)"
+        },
+        "followedAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the follow relationship was established.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "followerId",
+        "followingId",
+        "followedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores public profiles for artists. Documents are owned by the user whose ID matches the path parameter. Includes denormalized 'followersCount' and 'followingCount' for community metrics.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user (Firebase Auth UID) who owns this profile."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/artworks/{artworkId}",
+        "definition": {
+          "entityName": "Artwork",
+          "schema": {
+            "$ref": "#/backend/entities/Artwork"
+          },
+          "description": "Contains details for each piece of digital artwork. Publicly readable, but only the 'authorId' can modify. Includes denormalized 'authorId' for authorization independence.",
+          "params": [
+            {
+              "name": "artworkId",
+              "description": "The unique identifier for a specific artwork."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/artworks/{artworkId}/comments/{commentId}",
+        "definition": {
+          "entityName": "Comment",
+          "schema": {
+            "$ref": "#/backend/entities/Comment"
+          },
+          "description": "Stores comments made on individual artworks. Publicly readable, any authenticated user can create, but only the 'authorId' can modify their comment. Includes denormalized 'authorId' for authorization independence.",
+          "params": [
+            {
+              "name": "artworkId",
+              "description": "The unique identifier of the artwork the comment belongs to."
+            },
+            {
+              "name": "commentId",
+              "description": "The unique identifier for a specific comment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/follows/{followId}",
+        "definition": {
+          "entityName": "Follow",
+          "schema": {
+            "$ref": "#/backend/entities/Follow"
+          },
+          "description": "Records individual follow relationships between users. Publicly readable, but only the 'followerId' can create or delete their own follow relationship. Includes denormalized 'followerId' and 'followingId' for authorization independence.",
+          "params": [
+            {
+              "name": "followId",
+              "description": "The unique identifier for the follow relationship."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The recommended Firestore structure for Novart prioritizes security, scalability, and debuggability by adhering to the core design principles and strategy mandates. \n\n**Authorization Independence via Denormalization:**\n*   For `Artwork` documents stored in `/artworks/{artworkId}`, the `authorId` field is explicitly denormalized within each artwork document. This allows security rules to directly check `request.auth.uid == resource.data.authorId` for write, update, and delete operations without needing to perform a `get()` operation on a parent user document. This ensures atomic operations and simplifies rule logic.\n*   Similarly, for `Comment` documents nested under `/artworks/{artworkId}/comments/{commentId}`, the `authorId` field is included in each comment document. This enables direct authorization checks (`request.auth.uid == resource.data.authorId`) for comment modifications, again eliminating costly and complex `get()` calls in security rules.\n*   For `Follow` documents in the top-level `/follows/{followId}` collection, the `followerId` field is present. This permits security rules to verify `request.auth.uid == request.resource.data.followerId` (for creation) and `request.auth.uid == resource.data.followerId` (for deletion) directly, ensuring that only the user initiating the follow can establish or remove it. This avoids any need to inspect parent user documents for authorization.\n*   `UserProfile` documents, located at `/users/{userId}`, use path-based ownership. The `userId` in the path segment directly corresponds to the authenticated user's UID (`request.auth.uid`), providing implicit denormalization for authorization of profile modifications.\n\n**Support for Querying and Access Patterns (QAPs):**\n*   **Public Feeds:** The `/artworks` collection is designed for public read access, enabling the main 'Para Ti' feed (Masonry layout) to be efficiently queried and displayed. Queries can filter by `tags` for the 'New Artists' discovery algorithm and order by `createdAt` for recency.\n*   **User Profiles:** The `/users/{userId}` collection allows any user to read public profiles, supporting profile viewing and displaying 'followersCount' and 'followingCount'.\n*   **Artwork Comments:** The `/artworks/{artworkId}/comments/{commentId}` subcollection provides efficient listing of comments for a specific artwork, crucial for the social interaction feature.\n*   **Follow Relationships:** The top-level `/follows/{followId}` collection, although not a subcollection of users, enables straightforward QAPs for fetching a user's followers (`where('followingId', '==', uid)`) or who a user is following (`where('followerId', '==', uid)`). Cloud Functions will listen to changes in this collection to maintain the denormalized `followersCount` and `followingCount` on `UserProfile` documents, optimizing profile queries for these metrics.\n\nThis design leverages structural segregation, consistent access modeling, and explicit denormalization to create a robust, secure, and easily debuggable Firestore infrastructure for Novart."
+  }
+}

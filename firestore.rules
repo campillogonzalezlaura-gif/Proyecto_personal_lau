@@ -1,0 +1,112 @@
+/**
+ * NOVARTS FIRESTORE SECURITY RULES
+ * 
+ * CORE PHILOSOPHY:
+ * This ruleset implements a robust "Public Read, Owner Write" security model designed for a social 
+ * art-sharing platform. It prioritizes the protection of creative assets while ensuring maximum 
+ * discoverability for the global artist community.
+ *
+ * DATA STRUCTURE:
+ * - /users/{userId}: Root profiles. Publicly viewable, strictly owned by the corresponding Auth UID.
+ * - /artworks/{artworkId}: Root collection for creative uploads. Publicly viewable to support the 
+ *   "Para Ti" discovery feed.
+ * - /artworks/{artworkId}/comments/{commentId}: Nested subcollection for social interaction.
+ * - /follows/{followId}: Top-level collection managing relationships between artists.
+ *
+ * KEY SECURITY DECISIONS:
+ * - AUTH-BASED AUTHORIZATION: All write operations require a verified Firebase Auth identity.
+ * - DENORMALIZATION FOR PERFORMANCE: Ownership fields (authorId, followerId) are required on 
+ *   documents to allow for fast, direct authorization checks without expensive cross-document lookups.
+ * - RELATIONAL INTEGRITY: Rules enforce that internal ownership IDs match the authenticated user and 
+ *   remain immutable during updates to prevent account or content hijacking.
+ * - DESTRUCTIVE SAFETY: Delete operations are strictly limited to the original creator and 
+ *   require explicit verification that the document exists.
+ */
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- GLOBAL HELPER FUNCTIONS ---
+
+    /** Checks if the request is from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Checks if the user's UID matches a specific ID (path-based ownership). */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Checks if the user's UID matches a field in the document (data-based ownership). */
+    function isDataOwner(ownerId) {
+      return isSignedIn() && request.auth.uid == ownerId;
+    }
+
+    /** Validates ownership and document existence for updates and deletions. */
+    function isExistingOwner(ownerId) {
+      return resource != null && isDataOwner(ownerId);
+    }
+
+    // --- COLLECTION RULES ---
+
+    /**
+     * @description Rules for user profiles. Publicly readable for community discovery.
+     * @path /users/{userId}
+     * @allow get, list: if true; (Public viewing)
+     * @allow create: if isOwner(userId) && request.resource.data.id == userId;
+     * @deny update: if request.auth.uid != userId || request.resource.data.id != resource.data.id;
+     * @principle Pattern 4 (Self-Creation) and Path-Based Ownership.
+     */
+    match /users/{userId} {
+      allow get, list: if true;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if false; // Profiles are generally permanent; change if deletion is needed.
+    }
+
+    /**
+     * @description Rules for artworks. Public for feed discovery; author-only writes.
+     * @path /artworks/{artworkId}
+     * @allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+     * @deny update: if user is not authorId or if authorId is being changed.
+     * @principle Pattern 5 (Public Read with Owner-Only Writes) + Immvutability.
+     */
+    match /artworks/{artworkId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+      allow update: if isExistingOwner(resource.data.authorId) && request.resource.data.authorId == resource.data.authorId;
+      allow delete: if isExistingOwner(resource.data.authorId);
+
+      /**
+       * @description Social comments on specific artwork pieces.
+       * @path /artworks/{artworkId}/comments/{commentId}
+       * @allow create: if user is authenticated and sets themselves as authorId.
+       * @deny delete: if user is not the comment author.
+       * @principle Path-scoped shared access with explicit ownership.
+       */
+      match /comments/{commentId} {
+        allow get, list: if true;
+        allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid;
+        allow update: if isExistingOwner(resource.data.authorId) && request.resource.data.authorId == resource.data.authorId;
+        allow delete: if isExistingOwner(resource.data.authorId);
+      }
+    }
+
+    /**
+     * @description Records of social following relationships.
+     * @path /follows/{followId}
+     * @allow list: if true; (Required to fetch followers/following lists)
+     * @allow create: if followerId in data matches authenticated user.
+     * @deny update: if false; (Follows are binary; delete and recreate to change).
+     * @principle Explicit relationship ownership via denormalized IDs.
+     */
+    match /follows/{followId} {
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.followerId == request.auth.uid;
+      allow update: if false; 
+      allow delete: if isExistingOwner(resource.data.followerId);
+    }
+  }
+}
